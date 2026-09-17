@@ -1,0 +1,6 @@
+import { NextResponse } from "next/server";
+type Task = { id:string; title:string; status:"waiting"|"running"|"done"|"failed"; author:string; time:string; description?:string };
+const root = globalThis as typeof globalThis & { chobits?: {tasks:Task[];events:{icon:string;title:string;body:string}[];files:{name:string;change:string}[];connected:boolean} };
+function get(){ root.chobits ??= {connected:true,tasks:[],events:[],files:[]}; return root.chobits; }
+export async function POST(req:Request){const body=await req.json() as {title?:string;description?:string}; const title=body.title?.trim()||"新的 Codex 任务"; const s=get(); const task={id:`t-${Date.now()}`,title,status:"waiting" as const,author:"你",time:"刚刚",description:body.description||title}; s.tasks.unshift(task); s.events.unshift({icon:"◌",title:`创建了任务：${title}`,body:"等待本地 Codex 连接器处理 · 刚刚"}); return NextResponse.json(task);}
+export async function PATCH(req:Request){const body=await req.json() as {id:string;status:"running"|"done"|"failed"}; const s=get(); const task=s.tasks.find(t=>t.id===body.id); if(!task)return NextResponse.json({error:"任务不存在"},{status:404}); task.status=body.status; s.events.unshift({icon:body.status==="done"?"✓":"↻",title:`任务${body.status==="done"?"已完成":"开始执行"}：${task.title}`,body:"本地 Codex 连接器 · 刚刚"}); return NextResponse.json(task);}
